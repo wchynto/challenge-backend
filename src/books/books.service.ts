@@ -5,7 +5,6 @@ import { Book } from './entities/book.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Category } from 'src/categories/entities/category.entity';
-import { Author } from 'src/authors/entities/author.entity';
 
 @Injectable()
 export class BooksService {
@@ -13,8 +12,6 @@ export class BooksService {
     @InjectRepository(Book) private readonly bookRepository: Repository<Book>,
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
-    @InjectRepository(Author)
-    private readonly authorRepository: Repository<Author>,
   ) {}
 
   async create(createBookDto: CreateBookDto) {
