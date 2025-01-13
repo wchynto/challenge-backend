@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { TypeOrmOptionsFactory, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { User } from '../../users/entities/user.entity';
 
 @Injectable()
 export class DatabaseConnectionService implements TypeOrmOptionsFactory {
@@ -15,7 +16,7 @@ export class DatabaseConnectionService implements TypeOrmOptionsFactory {
       synchronize: true,
       dropSchema: false,
       logging: true,
-      entities: ['dist/**/*.entity.js'],
+      entities: [__dirname + '/../../**/*.entity{.ts,.js}'],
     };
   }
 }

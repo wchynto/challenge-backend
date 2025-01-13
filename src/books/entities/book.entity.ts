@@ -1,4 +1,4 @@
-import { Author } from 'src/authors/entities/author.entity';
+import { Author } from '../../authors/entities/author.entity';
 import { Category } from '../../categories/entities/category.entity';
 import {
   Column,
@@ -37,7 +37,7 @@ export class Book {
   @JoinTable()
   categories: Category[];
 
-  @ManyToMany((type)=> Author, (author) => author.books, {
+  @ManyToMany((type) => Author, (author) => author.books, {
     cascade: ['insert'],
   })
   @JoinTable()

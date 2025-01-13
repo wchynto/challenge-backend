@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from 'src/users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 import { Repository } from 'typeorm';
 import { SignUpDto } from './dto/signup.dto';
 import * as bcrypt from 'bcrypt';
@@ -23,17 +23,19 @@ export class AuthService {
     user.email = email;
     user.password = await bcrypt.hash(password, 10);
 
-    const cratedUser = await this.userRepository.save(user);
+    const createdUser: User = await this.userRepository.save(user);
 
-    const token = await this.jwtService.signAsync(
-      { UUID: cratedUser.UUID },
+    const token: string = await this.jwtService.signAsync(
+      { UUID: createdUser.UUID },
       {
         secret: this.configService.get('JWT_SECRET'),
         expiresIn: this.configService.get('JWT_EXPIRES'),
       },
     );
 
-    return { token };
+    delete createdUser.password;
+
+    return { user: createdUser, token };
   }
 
   async signIn(signinDto: SignInDto) {
@@ -50,7 +52,7 @@ export class AuthService {
       throw new Error('Invalid password');
     }
 
-    const token = await this.jwtService.signAsync(
+    const token: string = await this.jwtService.signAsync(
       { UUID: user.UUID },
       {
         secret: this.configService.get('JWT_SECRET'),
@@ -58,6 +60,8 @@ export class AuthService {
       },
     );
 
-    return { token };
+    delete user.password;
+
+    return { user, token };
   }
 }
