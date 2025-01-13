@@ -28,8 +28,8 @@ export class AuthService {
     const token: string = await this.jwtService.signAsync(
       { UUID: createdUser.UUID },
       {
-        secret: this.configService.get('JWT_SECRET'),
-        expiresIn: this.configService.get('JWT_EXPIRES'),
+        secret: await this.configService.get('JWT_SECRET'),
+        expiresIn: await this.configService.get('JWT_EXPIRES'),
       },
     );
 
@@ -55,8 +55,8 @@ export class AuthService {
     const token: string = await this.jwtService.signAsync(
       { UUID: user.UUID },
       {
-        secret: this.configService.get('JWT_SECRET'),
-        expiresIn: this.configService.get('JWT_EXPIRES'),
+        secret: await this.configService.get('JWT_SECRET'),
+        expiresIn: await this.configService.get('JWT_EXPIRES'),
       },
     );
 

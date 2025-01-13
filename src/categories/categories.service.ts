@@ -12,29 +12,29 @@ export class CategoriesService {
     private readonly categoryRepository: Repository<Category>,
   ) {}
 
-  create(createCategoryDto: CreateCategoryDto) {
+  async create(createCategoryDto: CreateCategoryDto) {
     const category: Category = new Category();
     category.name = createCategoryDto.name;
     category.description = createCategoryDto.description;
-    return this.categoryRepository.save(category);
+    return await this.categoryRepository.save(category);
   }
 
-  findAll() {
-    return this.categoryRepository.find();
+  async findAll() {
+    return await this.categoryRepository.find();
   }
 
-  findOne(UUID: string) {
-    return this.categoryRepository.findOneByOrFail({ UUID });
+  async findOne(UUID: string) {
+    return await this.categoryRepository.findOneByOrFail({ UUID });
   }
 
-  update(UUID: string, updateCategoryDto: UpdateCategoryDto) {
+  async update(UUID: string, updateCategoryDto: UpdateCategoryDto) {
     const category: Category = new Category();
     category.name = updateCategoryDto.name;
     category.description = updateCategoryDto.description;
-    return this.categoryRepository.update({ UUID }, category);
+    return await this.categoryRepository.update({ UUID }, category);
   }
 
-  remove(UUID: string) {
-    return this.categoryRepository.delete({ UUID });
+  async remove(UUID: string) {
+    return await this.categoryRepository.delete({ UUID });
   }
 }

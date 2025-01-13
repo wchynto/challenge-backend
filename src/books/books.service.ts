@@ -31,26 +31,29 @@ export class BooksService {
     book.price = createBookDto.price;
     book.categories = categories;
     book.authors = createBookDto.authors;
-    return this.bookRepository.save(book);
+    return await this.bookRepository.save(book);
   }
 
-  findAll() {
-    return this.bookRepository.find();
+  async findAll() {
+    return await this.bookRepository.find();
   }
 
-  findOne(UUID: string) {
-    return this.bookRepository.findOneByOrFail({ UUID });
+  async findOne(UUID: string) {
+    return await this.bookRepository.findOneByOrFail({ UUID });
   }
 
   async update(UUID: string, updateBookDto: UpdateBookDto) {
-    const categories: Array<Category> = await Promise.all(
-      updateBookDto.categories.map(async (categoryUUID) => {
-        const category = await this.categoryRepository.findOneByOrFail({
-          UUID: categoryUUID.toString(),
-        });
-        return category;
-      }),
-    );
+    let categories: Array<Category>;
+    if (updateBookDto.categories) {
+      categories = await Promise.all(
+        updateBookDto.categories.map(async (categoryUUID) => {
+          const category = await this.categoryRepository.findOneByOrFail({
+            UUID: categoryUUID.toString(),
+          });
+          return category;
+        }),
+      );
+    }
 
     const book: Book = new Book();
     book.title = updateBookDto.title;
@@ -59,10 +62,10 @@ export class BooksService {
     book.price = updateBookDto.price;
     book.categories = categories;
     book.authors = updateBookDto.authors;
-    return this.bookRepository.update(UUID, book);
+    return await this.bookRepository.update(UUID, book);
   }
 
-  remove(UUID: string) {
-    return this.bookRepository.delete(UUID);
+  async remove(UUID: string) {
+    return await this.bookRepository.delete(UUID);
   }
 }

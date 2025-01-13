@@ -6,6 +6,8 @@ import {
   Patch,
   Param,
   Delete,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { AuthorsService } from './authors.service';
 import { CreateAuthorDto } from './dto/create-author.dto';
@@ -16,30 +18,75 @@ export class AuthorsController {
   constructor(private readonly authorsService: AuthorsService) {}
 
   @Post()
-  create(@Body() createAuthorDto: CreateAuthorDto) {
-    return this.authorsService.create(createAuthorDto);
+  async create(@Body() createAuthorDto: CreateAuthorDto) {
+    return this.handleRequest(
+      () => this.authorsService.create(createAuthorDto),
+      'Author created successfully',
+      'Failed to create author',
+    );
   }
 
   @Get()
-  findAll() {
-    return this.authorsService.findAll();
+  async findAll() {
+    return this.handleRequest(
+      () => this.authorsService.findAll(),
+      'Authors retrieved successfully',
+      'Failed to retrieve authors',
+    );
   }
 
   @Get(':UUID')
-  findOne(@Param('UUID') UUID: string) {
-    return this.authorsService.findOne(UUID);
+  async findOne(@Param('UUID') UUID: string) {
+    return this.handleRequest(
+      () => this.authorsService.findOne(UUID),
+      'Author retrieved successfully',
+      'Failed to retrieve author',
+    );
   }
 
   @Patch(':UUID')
-  update(
+  async update(
     @Param('UUID') UUID: string,
     @Body() updateAuthorDto: UpdateAuthorDto,
   ) {
-    return this.authorsService.update(UUID, updateAuthorDto);
+    return this.handleRequest(
+      () => this.authorsService.update(UUID, updateAuthorDto),
+      'Author updated successfully',
+      'Failed to update author',
+    );
   }
 
   @Delete(':UUID')
-  remove(@Param('UUID') UUID: string) {
-    return this.authorsService.remove(UUID);
+  async remove(@Param('UUID') UUID: string) {
+    return this.handleRequest(
+      () => this.authorsService.remove(UUID),
+      'Author deleted successfully',
+      'Failed to delete author',
+    );
+  }
+
+  private async handleRequest(
+    serviceMethod: () => Promise<any>,
+    successMessage: string,
+    errorMessage: string,
+  ) {
+    try {
+      const data = await serviceMethod();
+      return {
+        success: true,
+        message: successMessage,
+        data,
+      };
+    } catch (error) {
+      const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      throw new HttpException(
+        {
+          success: false,
+          message: errorMessage,
+          error: error.message,
+        },
+        status,
+      );
+    }
   }
 }
