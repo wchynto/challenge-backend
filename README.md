@@ -1,99 +1,185 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Service Repository Pattern
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+![Service Repository Pattern](./repository_pattern.png)
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Merupakan pendekatan dengan memisahkan business logic dan query logic bertujuann untuk membangun sebuah aplikasi yang mudah di maintenance. Pendekatan ini sangat barguna sekali pada aplikasi yang kompleks yang dimana kita harus memanajemen business logic dan akses data secara efektif dan mengurangi redudansi atau penulisan algoritma kode secara berulang.
 
-## Description
+Dalam kasus proyek ini, Saya memisahkan antara controller, service, dan repository. Controller akan mengatur route dan request dari user, selanjutnya akan diteruskan oleh service yang akan mengolah data input, lalu setelahnya akan dilanjutkan oleh repository sebagai data acces untuk melakukan proses simpan, hapus, ubah ke dalam database.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+**Contoh Penulisan Controller**
 
-## Project setup
+```
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
+import { UsersService } from './users.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
-```bash
-$ npm install
+@Controller('users')
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
+
+  @Post()
+  create(@Body() createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto);
+  }
+
+  @Get()
+  findAll() {
+    return this.usersService.findAll();
+  }
+
+  @Get(':UUID')
+  findOne(@Param('UUID') UUID: string) {
+    return this.usersService.findOne(UUID);
+  }
+
+  @Patch(':UUID')
+  update(@Param('UUID') UUID: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(UUID, updateUserDto);
+  }
+
+  @Delete(':UUID')
+  remove(@Param('UUID') UUID: string) {
+    return this.usersService.remove(UUID);
+  }
+}
 ```
 
-## Compile and run the project
+**Contoh Penulisan service**
 
-```bash
-# development
-$ npm run start
+```
+import { Injectable } from '@nestjs/common';
+import { CreateBookDto } from './dto/create-book.dto';
+import { UpdateBookDto } from './dto/update-book.dto';
+import { Book } from './entities/book.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Category } from '../categories/entities/category.entity';
 
-# watch mode
-$ npm run start:dev
+@Injectable()
+export class BooksService {
+  constructor(
+    @InjectRepository(Book) private readonly bookRepository: Repository<Book>,
+    @InjectRepository(Category)
+    private readonly categoryRepository: Repository<Category>,
+  ) {}
 
-# production mode
-$ npm run start:prod
+  async create(createBookDto: CreateBookDto) {
+    const categories: Array<Category> = await Promise.all(
+      createBookDto.categories.map(async (categoryUUID) => {
+        const category = await this.categoryRepository.findOneByOrFail({
+          UUID: categoryUUID.toString(),
+        });
+        return category;
+      }),
+    );
+
+    const book: Book = new Book();
+    book.title = createBookDto.title;
+    book.description = createBookDto.description;
+    book.publishedYear = createBookDto.publishedYear;
+    book.price = createBookDto.price;
+    book.categories = categories;
+    book.authors = createBookDto.authors;
+    return await this.bookRepository.save(book);
+  }
+
+  async findAll() {
+    return await this.bookRepository.find();
+  }
+
+  async findOne(UUID: string) {
+    return await this.bookRepository.findOneByOrFail({ UUID });
+  }
+
+  async update(UUID: string, updateBookDto: UpdateBookDto) {
+    let categories: Array<Category>;
+    if (updateBookDto.categories) {
+      categories = await Promise.all(
+        updateBookDto.categories.map(async (categoryUUID) => {
+          const category = await this.categoryRepository.findOneByOrFail({
+            UUID: categoryUUID.toString(),
+          });
+          return category;
+        }),
+      );
+    }
+
+    const book: Book = new Book();
+    book.title = updateBookDto.title;
+    book.description = updateBookDto.description;
+    book.publishedYear = updateBookDto.publishedYear;
+    book.price = updateBookDto.price;
+    book.categories = categories;
+    book.authors = updateBookDto.authors;
+    return await this.bookRepository.update(UUID, book);
+  }
+
+  async remove(UUID: string) {
+    return await this.bookRepository.delete(UUID);
+  }
+}
 ```
 
-## Run tests
+Jadi dalam kode diatas, bisa dilihat bahwasanya dalam controller lebih ringkas, karena logika bisnisnya ditulis pada service layer, dan controller hanya menghandle request dari view. selanjutnya untuk repository itu sudah di handle oleh bawaan TypeORM sendiri. Jadi, kita tidak perlu untuk melakukan penulisan kode repository. Pada umumnya jika kita tidak menggunakan library atau dikerjakan secara native. kita perlu menulis query-query ke dalam data base untuk membuat repository.
 
-```bash
-# unit tests
-$ npm run test
+# DTO (Data Transfer Object) Pattern
 
-# e2e tests
-$ npm run test:e2e
+![Service Repository Pattern](./dto.jpg)
 
-# test coverage
-$ npm run test:cov
+DTO merupakan objek yang dirancang untuk membawa data antar proses dalam sebuah aplikasi. hal ini berguna untuk menjaga konsistensi data, meningkatkan keamanan data dan kinerja aplikasi.
+
+Dalam kasus ini, data request dari view atau presentation layer akan disimmpan pada DTO dan akan divalidasi untuk inputnya. Kemudaian DTO ini akan membawa data untuk diolah lebih lanjut ke dalam business layer dan data layer. Jadi data input tidak akan secara langsung diolah, namun akan disimpan pada DTO. Hal ini akan menjaga konsistensi dan efisiensi karena tidak melakukan pemanggilan berulang, hanya cukup memanggil DTO untuk pemrosesan lebih lanjut.
+
+**Contoh Penulisan DTO**
+
+```
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsArray,
+} from 'class-validator';
+import { Author } from 'src/authors/entities/author.entity';
+import { Category } from 'src/categories/entities/category.entity';
+
+export class CreateBookDto {
+  @IsString()
+  @IsNotEmpty()
+  title: string;
+
+  @IsString()
+  @IsOptional()
+  description: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  publishedYear: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  price: number;
+
+  @IsArray()
+  @IsNotEmpty()
+  categories: Category[];
+
+  @IsArray()
+  authors: Author[];
+}
 ```
 
-## Deployment
+Dalam kode diatas bisa dilihat untuk DTO akan memvalidasi data input dari request kemudian baru akan memasuki tahapan berikutnya pada layer berikutnya, bisa dilihat dari bab sebelumnya, untuk data yang diproses adalah data yang sudah disimpan pada DTO.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+# Kesimpulan
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Aplikasi ini menggunakan Service Repository Pattern dan dikombinasikan dengan DTO pattern untuk menjaga peforma, efisiensi dan kemudahan untuk bisa di kembangkan ataupun di maintenance lebih lanjut.
